@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculateur Avancé de Trames MODBUS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+  <link href="./style.css"  rel="stylesheet" type="text/css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Calculateur Avancé de Trames MODBUS</h1>
+        
+        <ul class="nav nav-tabs" id="modbusTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="ascii-tab" data-bs-toggle="tab" data-bs-target="#ascii" type="button" role="tab">MODBUS ASCII</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="rtu-tab" data-bs-toggle="tab" data-bs-target="#rtu" type="button" role="tab">MODBUS RTU</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tcp-tab" data-bs-toggle="tab" data-bs-target="#tcp" type="button" role="tab">MODBUS TCP/IP</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="modbusTabsContent">
+            <!-- MODBUS ASCII Tab -->
+            <div class="tab-pane fade show active" id="ascii" role="tabpanel" aria-labelledby="ascii-tab">
+                <div class="mb-3">
+                    <label for="asciiAddress" class="form-label">Adresse de l'esclave (hex):</label>
+                    <input type="text" class="form-control" id="asciiAddress" value="01" maxlength="2" pattern="[0-9a-fA-F]{2}">
+                </div>
+                <div class="mb-3">
+                    <label for="asciiFunction" class="form-label">Fonction (hex):</label>
+                    <input type="text" class="form-control" id="asciiFunction" value="03" maxlength="2" pattern="[0-9a-fA-F]{2}">
+                </div>
+                <div class="mb-3">
+                    <label for="asciiData" class="form-label">Données (hex, sans espaces): 
+                        <span class="badge bg-secondary info-badge" title="Max 252 octets (504 caractères hexa)">?</span>
+                    </label>
+                    <input type="text" class="form-control" id="asciiData" value="006B0003">
+                </div>
+                <button class="btn btn-primary" onclick="calculateAscii()">Calculer la trame</button>
+                
+                <div class="mt-4">
+                    <h5>Trame MODBUS ASCII complète: <small>(<span class="crlf-display">CRLF</span> = 0x0D 0x0A)</small></h5>
+                    <div class="result-box" id="asciiResult"></div>
+                </div>
+                
+                <div class="mt-3">
+                    <h5>Détails du calcul:</h5>
+                    <div id="asciiDetails"></div>
+                </div>
+            </div>
+            
+            <!-- MODBUS RTU Tab -->
+            <div class="tab-pane fade" id="rtu" role="tabpanel" aria-labelledby="rtu-tab">
+                <div class="mb-3">
+                    <label for="rtuAddress" class="form-label">Adresse de l'esclave (hex):</label>
+                    <input type="text" class="form-control" id="rtuAddress" value="01" maxlength="2" pattern="[0-9a-fA-F]{2}">
+                </div>
+                <div class="mb-3">
+                    <label for="rtuFunction" class="form-label">Fonction (hex):</label>
+                    <input type="text" class="form-control" id="rtuFunction" value="03" maxlength="2" pattern="[0-9a-fA-F]{2}">
+                </div>
+                <div class="mb-3">
+                    <label for="rtuData" class="form-label">Données (hex, sans espaces): 
+                        <span class="badge bg-secondary info-badge" title="Max 252 octets (504 caractères hexa)">?</span>
+                    </label>
+                    <input type="text" class="form-control" id="rtuData" value="006B0003">
+                </div>
+                <button class="btn btn-primary" onclick="calculateRtu()">Calculer la trame</button>
+                
+                <div class="mt-4">
+                    <h5>Trame MODBUS RTU complète:</h5>
+                    <div class="result-box" id="rtuResult"></div>
+                </div>
+                
+                <div class="mt-3">
+                    <h5>Détails du calcul:</h5>
+                    <div id="rtuDetails"></div>
+                </div>
+            </div>
+            
+            <!-- MODBUS TCP Tab -->
+            <div class="tab-pane fade" id="tcp" role="tabpanel" aria-labelledby="tcp-tab">
+                <div class="mb-3">
+                    <label for="tcpTransactionId" class="form-label">ID de transaction (hex):</label>
+                    <input type="text" class="form-control" id="tcpTransactionId" value="0001" maxlength="4" pattern="[0-9a-fA-F]{4}">
+                </div>
+                <div class="mb-3">
+                    <label for="tcpProtocolId" class="form-label">ID de protocole (hex):</label>
+                    <input type="text" class="form-control" id="tcpProtocolId" value="0000" maxlength="4" pattern="[0-9a-fA-F]{4}">
+                </div>
+                <div class="mb-3">
+                    <label for="tcpLength" class="form-label">Longueur (hex, calculé automatiquement):</label>
+                    <input type="text" class="form-control" id="tcpLength" value="0006" readonly>
+                </div>
+                <div class="mb-3">
+                    <label for="tcpUnitId" class="form-label">ID d'unité (hex):</label>
+                    <input type="text" class="form-control" id="tcpUnitId" value="01" maxlength="2" pattern="[0-9a-fA-F]{2}">
+                </div>
+                <div class="mb-3">
+                    <label for="tcpFunction" class="form-label">Fonction (hex):</label>
+                    <input type="text" class="form-control" id="tcpFunction" value="03" maxlength="2" pattern="[0-9a-fA-F]{2}">
+                </div>
+                <div class="mb-3">
+                    <label for="tcpData" class="form-label">Données (hex, sans espaces): 
+                        <span class="badge bg-secondary info-badge" title="Max 252 octets (504 caractères hexa)">?</span>
+                    </label>
+                    <input type="text" class="form-control" id="tcpData" value="006B0003">
+                </div>
+                <button class="btn btn-primary" onclick="calculateTcp()">Calculer la trame</button>
+                
+                <div class="mt-4">
+                    <h5>Trame MODBUS TCP/IP complète:</h5>
+                    <div class="result-box" id="tcpResult"></div>
+                </div>
+                
+                <div class="mt-3">
+                    <h5>Détails du calcul:</h5>
+                    <div id="tcpDetails"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">Informations Techniques sur MODBUS</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Limites de taille des trames</h5>
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Min</th>
+                                    <th>Max</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>ASCII</td>
+                                    <td>5 caractères</td>
+                                    <td>513 caractères</td>
+                                </tr>
+                                <tr>
+                                    <td>RTU</td>
+                                    <td>4 octets</td>
+                                    <td>256 octets</td>
+                                </tr>
+                                <tr>
+                                    <td>TCP</td>
+                                    <td>12 octets</td>
+                                    <td>260 octets</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Calculs techniques</h5>
+                        <ul>
+                            <li><strong>CRC-16 MODBUS</strong>: Polynôme 0x8005, initialisation 0xFFFF</li>
+                            <li><strong>LRC ASCII</strong>: Somme des octets, complément à 2</li>
+                            <li><strong>PDU TCP</strong>: UnitID + Fonction + Données</li>
+                        </ul>
+                    </div>
+                    <div class="card mt-4">
+                        <div class="card-header">Informations sur les limites de taille MODBUS</div>
+                        <div class="card-body">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Taille minimale</th>
+                                        <th>Taille maximale</th>
+                                        <th>Détails</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>ASCII</td>
+                                        <td>5 caractères (":0101F1\r\n")</td>
+                                        <td>513 caractères</td>
+                                        <td>252 octets max de données (504 caractères hexa) + ":...LRC\r\n"</td>
+                                    </tr>
+                                    <tr>
+                                        <td>RTU</td>
+                                        <td>4 octets (Adr+Fct+CRC)</td>
+                                        <td>256 octets</td>
+                                        <td>252 octets max de données + Adr+Fct+CRC</td>
+                                    </tr>
+                                    <tr>
+                                        <td>TCP</td>
+                                        <td>12 octets (MBAP+PDU min)</td>
+                                        <td>260 octets</td>
+                                        <td>7 octets MBAP + 253 octets PDU (Fct+252 données)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <p class="mt-3"><strong>Note sur CRLF:</strong> Dans MODBUS ASCII, CRLF (0x0D 0x0A) marque la fin de trame. Le LRC est calculé sur le message sans les délimiteurs.</p>
+                        </div>
+                    </div>
+                    <div class="card mt-4">
+                        <div class="card-header">Informations sur MODBUS</div>
+                        <div class="card-body">
+                            <p><strong>MODBUS ASCII:</strong> Chaque octet est représenté par deux caractères ASCII. La trame commence par ":" et se termine par CRLF. Le LRC (Longitudinal Redundancy Check) est calculé sur les octets de la trame (sans les caractères de début/fin).</p>
+                            <p><strong>MODBUS RTU:</strong> Format binaire compact avec un silence d'au moins 3.5 caractères avant et après la trame. Utilise un CRC-16 pour la vérification d'erreur.</p>
+                            <p><strong>MODBUS TCP/IP:</strong> Ajoute un en-tête MBAP (Modbus Application Protocol header) et utilise le même CRC que RTU (bien que souvent omis car TCP fournit déjà un contrôle d'erreur).</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="./script.js" type="text/javascript">
+      
+    </script>
+</body>
+</html>
